@@ -82,14 +82,25 @@ def process_excel(uploaded_file, sheet_name):
 st.title("Excel Data Cleaner")
 
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
-sheet_name = st.text_input("Enter the sheet name to filter", value="File ทำงาน")
 
 if uploaded_file:
-    st.write("File uploaded successfully!")
-    output_file = process_excel(uploaded_file, sheet_name)
-    st.download_button(
-        label="Download Processed File",
-        data=output_file,
-        file_name="cleaned_data.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    # Read the sheet names from the uploaded Excel file
+    xls = pd.ExcelFile(uploaded_file)
+    sheet_names = xls.sheet_names
+    
+    # Let the user select a sheet from the dropdown
+    sheet_name = st.selectbox("Select a sheet", sheet_names)
+
+    st.write(f"Selected sheet: {sheet_name}")
+    
+    # Button to filter data
+    if st.button("Filter Data"):
+        output_file = process_excel(uploaded_file, sheet_name)
+        
+        # Allow the user to download the processed file
+        st.download_button(
+            label="Download Filtered File",
+            data=output_file,
+            file_name="filtered_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
