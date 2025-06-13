@@ -126,7 +126,7 @@ def process_excel(df):
     return output_buffer
 
 # --- Streamlit UI ---
-st.title("ALLProcess Data Cleaner V2.0")
+st.title("ALLProcess Data Cleaner V3.0")
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 
 sheet_names = []
