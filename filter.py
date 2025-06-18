@@ -17,7 +17,7 @@ INCORRECT_TERMS = {
 # --- Email summary function ---
 def summarize_email_domains(df, column_name='E-mail ผู้สร้างเอกสาร'):
     def extract_domain(email):
-        if pd.isna(email) or str(email).strip() == "":
+        if pd.isna(email) or str(email).strip() == "" or str(email).strip().lower() == "nan":
             return "cpall.co.th"
         match = re.search(r'@([\w\.-]+)', str(email))
         return match.group(1).lower() if match else "unknown"
@@ -79,7 +79,7 @@ def process_excel(df):
     incorrect_data = df[incorrect_mask].copy()
 
     correct_data[ASSET_COLUMN] = correct_data[ASSET_COLUMN].apply(cleanse_asset_code)
-    progress_bar.progress(40)
+    progress_bar.progress(30)
 
     split_rows = []
     for _, row in incorrect_data.iterrows():
@@ -92,9 +92,18 @@ def process_excel(df):
                 split_rows.append(new_row)
 
     split_result = pd.DataFrame(split_rows)
-    progress_bar.progress(60)
+    progress_bar.progress(50)
 
     merged_result = pd.concat([correct_data, split_result], ignore_index=True)
+
+    # === Remove full-row duplicates AND duplicates based on ASSET_COLUMN ===
+    merged_result = merged_result.drop_duplicates(subset=merged_result.columns.tolist(), keep='first')
+    merged_result = merged_result.drop_duplicates(subset=[ASSET_COLUMN], keep='first')
+
+    # === Final Clean-Up and Checks ===
+    merged_result[ASSET_COLUMN] = merged_result[ASSET_COLUMN].apply(cleanse_asset_code)
+    merged_result = merged_result[~merged_result[ASSET_COLUMN].apply(is_invalid_asset)]
+
     merged_result["Duplicate"] = merged_result.duplicated(subset=[ASSET_COLUMN], keep=False).map({True: "Yes", False: "No"})
 
     tara_silom_data = merged_result[merged_result[CENTRAL_ASSET_COLUMN] == 'อภิสรา สีดาคุณ']
@@ -108,8 +117,8 @@ def process_excel(df):
 
     progress_bar.progress(80)
 
-    # === Generate Email Domain Summary AFTER all filtering ===
-    email_summary = summarize_email_domains(correct_all, column_name='E-mail ผู้สร้างเอกสาร')
+    email_summary_correct = summarize_email_domains(correct_all, column_name='E-mail ผู้สร้างเอกสาร')
+    email_summary_tara = summarize_email_domains(tara_silom_data, column_name='E-mail ผู้สร้างเอกสาร')
 
     # === Write all outputs ===
     output_buffer = BytesIO()
@@ -117,7 +126,8 @@ def process_excel(df):
         correct_all.to_excel(writer, sheet_name="Correct Data", index=False)
         tara_silom_data.to_excel(writer, sheet_name="Tara-Silom", index=False)
         duplicate_wrong_data.to_excel(writer, sheet_name="Duplicate & Wrong Data", index=False)
-        email_summary.to_excel(writer, sheet_name="Company Email", index=False)
+        email_summary_correct.to_excel(writer, sheet_name="Company Email", index=False)
+        email_summary_tara.to_excel(writer, sheet_name="Tara-Silom Email Summary", index=False)
 
     output_buffer.seek(0)
     progress_bar.progress(100)
@@ -126,7 +136,7 @@ def process_excel(df):
     return output_buffer
 
 # --- Streamlit UI ---
-st.title("ALLProcess Data Cleaner V3.0")
+st.title("ALLProcess Data Cleaner V4.0")
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 
 sheet_names = []
