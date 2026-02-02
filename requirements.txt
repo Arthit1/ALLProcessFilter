@@ -1,3 +1,5 @@
 openpyxl
 pandas
 streamlit
+streamlit>=1.30
+altair>=5
